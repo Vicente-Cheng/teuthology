@@ -26,8 +26,8 @@ class Grapher(object):
         format='png',
     )
 
-    def __init__(self, remotes, time_from, time_until='now'):
-        self.remotes = remotes
+    def __init__(self, hosts, time_from, time_until='now'):
+        self.hosts = hosts
         self.time_from = time_from
         self.time_until = time_until
 
@@ -45,7 +45,7 @@ class Grapher(object):
         return template.format(base_url=self.base_url, args=args)
 
     def get_target_globs(self, metric=''):
-        globs = ['*{}*'.format(rem.shortname) for rem in self.remotes]
+        globs = ['*{}*'.format(host) for host in self.hosts]
         if metric:
             globs = ['{}.{}'.format(glob, metric) for glob in globs]
         return globs
@@ -93,8 +93,9 @@ class PCP(Task):
         self.write_html(mode='static')
 
     def build_graph_urls(self):
+        hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
         self.grapher = Grapher(
-            remotes=self.cluster.remotes.keys(),
+            hosts=hosts,
             time_from=self.start_time,
             time_until=self.stop_time,
         )
