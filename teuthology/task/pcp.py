@@ -87,7 +87,7 @@ class PCP(Task):
 
     def end(self):
         self.stop_time = int(time.time())
-        log.debug("stop_time: %s", self.start_time)
+        log.debug("stop_time: %s", self.stop_time)
         self.build_graph_urls()
         self.download_graphs()
         self.write_html(mode='static')
