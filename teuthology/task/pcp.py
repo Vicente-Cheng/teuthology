@@ -17,6 +17,9 @@ log = logging.getLogger(__name__)
 
 
 class Grapher(object):
+    pass
+
+class GraphiteGrapher(Grapher):
     base_url = "http://pcp.front.sepia.ceph.com:44323/graphite/render"
 
     defaults = dict(
@@ -94,7 +97,7 @@ class PCP(Task):
 
     def build_graph_urls(self):
         hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
-        self.grapher = Grapher(
+        self.grapher = GraphiteGrapher(
             hosts=hosts,
             time_from=self.start_time,
             time_until=self.stop_time,
