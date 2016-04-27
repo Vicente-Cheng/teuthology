@@ -170,6 +170,7 @@ class TeuthologyConfig(YamlConfig):
                 'size': 1,
             },
         },
+        'pcp_host': 'http://pcp.front.sepia.ceph.com:44323/',
     }
 
     def __init__(self, yaml_path=None):
