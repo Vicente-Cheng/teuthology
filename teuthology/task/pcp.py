@@ -11,28 +11,32 @@ import requests
 import time
 import urllib
 
+from teuthology.config import config as teuth_config
+
 from . import Task
 
 log = logging.getLogger(__name__)
 
 
 class Grapher(object):
-    pass
+    def __init__(self, hosts, time_from, time_until='now'):
+        self.base_url = "{host}{endpoint}".format(
+            host=teuth_config.pcp_host,
+            endpoint=self._endpoint,
+        )
+        self.hosts = hosts
+        self.time_from = time_from
+        self.time_until = time_until
+
 
 class GraphiteGrapher(Grapher):
-    base_url = "http://pcp.front.sepia.ceph.com:44323/graphite/render"
-
     defaults = dict(
         width='1200',
         height='300',
         hideLegend='false',
         format='png',
     )
-
-    def __init__(self, hosts, time_from, time_until='now'):
-        self.hosts = hosts
-        self.time_from = time_from
-        self.time_until = time_until
+    _endpoint = '/graphite/render'
 
     def get_graph_url(self, metric):
         config = dict(self.defaults)
