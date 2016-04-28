@@ -49,9 +49,19 @@ class GraphiteGrapher(Grapher):
     )
     _endpoint = '/graphite/render'
 
-    def __init__(self, hosts, time_from, time_until='now', dest_dir=None):
+    def __init__(self, hosts, time_from, time_until='now', dest_dir=None,
+                 job_id=None):
         super(GraphiteGrapher, self).__init__(hosts, time_from, time_until)
         self.dest_dir = dest_dir
+        self.job_id = job_id
+
+    def build_graph_urls(self):
+        if not hasattr(self, 'graphs'):
+            self.graphs = dict()
+        for metric in self.metrics:
+            metric_dict = self.graphs.get(metric, dict())
+            metric_dict['url'] = self.get_graph_url(metric)
+            self.graphs[metric] = metric_dict
 
     def _check_dest_dir(self):
         if not self.dest_dir:
@@ -59,6 +69,7 @@ class GraphiteGrapher(Grapher):
 
     def write_html(self, mode='dynamic'):
         self._check_dest_dir()
+        self.build_graph_urls()
         generated_html = self.generate_html(mode=mode)
         html_path = os.path.join(self.dest_dir, 'pcp.html')
         with open(html_path, 'w') as f:
@@ -69,23 +80,16 @@ class GraphiteGrapher(Grapher):
         loader = jinja2.loaders.FileSystemLoader(cwd)
         env = jinja2.Environment(loader=loader)
         template = env.get_template('pcp.j2')
-        log.debug(str(self.ctx.config))
         data = template.render(
-            job_id=self.ctx.config.get('job_id'),
+            job_id=self.job_id,
             graphs=self.graphs,
             mode=mode,
         )
         return data
 
-    def build_graph_urls(self):
-        self.graphs = dict()
-        for metric in self.metrics:
-            self.graphs[metric] = dict(
-                url=self.get_graph_url(metric),
-            )
-
     def download_graphs(self):
         self._check_dest_dir()
+        self.build_graph_urls()
         for metric in self.graphs.keys():
             url = self.graphs[metric]['url']
             filename = self._sanitize_metric_name(metric) + '.png'
@@ -161,6 +165,7 @@ class PCP(Task):
                 time_from=self.start_time,
                 time_until=self.stop_time,
                 dest_dir=self.out_dir,
+                job_id=self.ctx.config.get('job_id'),
             )
 
     def begin(self):
