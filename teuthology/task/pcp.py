@@ -26,6 +26,29 @@ class Grapher(object):
         self.time_until = time_until
 
 
+class GrafanaGrapher(Grapher):
+    _endpoint = '/grafana/index.html#/dashboard/script/index.js'
+
+    def __init__(self, hosts, time_from, time_until='now', job_id=None):
+        super(GrafanaGrapher, self).__init__(hosts, time_from, time_until)
+        self.job_id = job_id
+
+    def build_graph_url(self):
+        config = dict(
+            hosts=','.join(self.hosts),
+            time_from=self._format_time(self.time_from),
+        )
+        if self.time_until:
+            config['time_to'] = self._format_time(self.time_until)
+        args = urllib.urlencode(config)
+        template = "{base_url}?{args}"
+        return template.format(base_url=self.base_url, args=args)
+
+    @staticmethod
+    def _format_time(seconds):
+        return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(seconds))
+
+
 class GraphiteGrapher(Grapher):
     metrics = [
         'kernel.all.load.1 minute',
