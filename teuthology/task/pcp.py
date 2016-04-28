@@ -1,9 +1,4 @@
 # maybe run pcp role?
-# capture time at start
-# capture time at stop
-# record time range + hosts
-# locate pcp archive
-# generate graphs
 import jinja2
 import logging
 import os
