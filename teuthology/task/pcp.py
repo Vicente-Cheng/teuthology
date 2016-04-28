@@ -10,6 +10,7 @@ import os
 import requests
 import time
 import urllib
+import urlparse
 
 from teuthology.config import config as teuth_config
 
@@ -22,17 +23,25 @@ class Grapher(object):
     _endpoint = '/'
 
     def __init__(self, hosts, time_from, time_until='now'):
-        self.base_url = "{host}{endpoint}".format(
-            host=teuth_config.pcp_host,
-            endpoint=self._endpoint,
-        )
+        self.base_url = urlparse.urljoin(
+            teuth_config.pcp_host,
+            self._endpoint)
         self.hosts = hosts
         self.time_from = time_from
         self.time_until = time_until
 
 
 class GraphiteGrapher(Grapher):
-    defaults = dict(
+    metrics = [
+        'kernel.all.load.1 minute',
+        'mem.util.free',
+        'mem.util.used',
+        'network.interface.*.bytes.*',
+        'disk.all.read_bytes',
+        'disk.all.write_bytes',
+    ]
+
+    graph_defaults = dict(
         width='1200',
         height='300',
         hideLegend='false',
@@ -40,11 +49,18 @@ class GraphiteGrapher(Grapher):
     )
     _endpoint = '/graphite/render'
 
+    def __init__(self, hosts, time_from, time_until='now', dest_dir=None):
+        super(GraphiteGrapher, self).__init__(hosts, time_from, time_until)
+        self.dest_dir = dest_dir
+
+    def _check_dest_dir(self):
+        if not self.dest_dir:
+            raise RuntimeError("Must provide a dest_dir!")
+
     def write_html(self, mode='dynamic'):
-        if not self.ctx.archive:
-            return
+        self._check_dest_dir()
         generated_html = self.generate_html(mode=mode)
-        html_path = os.path.join(self.out_dir, 'pcp.html')
+        html_path = os.path.join(self.dest_dir, 'pcp.html')
         with open(html_path, 'w') as f:
             f.write(generated_html)
 
@@ -62,26 +78,19 @@ class GraphiteGrapher(Grapher):
         return data
 
     def build_graph_urls(self):
-        hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
-        self.grapher = GraphiteGrapher(
-            hosts=hosts,
-            time_from=self.start_time,
-            time_until=self.stop_time,
-        )
         self.graphs = dict()
         for metric in self.metrics:
             self.graphs[metric] = dict(
-                url=self.grapher.get_graph_url(metric),
+                url=self.get_graph_url(metric),
             )
 
     def download_graphs(self):
-        if not self.ctx.archive:
-            return
+        self._check_dest_dir()
         for metric in self.graphs.keys():
             url = self.graphs[metric]['url']
             filename = self._sanitize_metric_name(metric) + '.png'
             self.graphs[metric]['file'] = graph_path = os.path.join(
-                self.out_dir,
+                self.dest_dir,
                 filename,
             )
             resp = requests.get(url)
@@ -97,7 +106,7 @@ class GraphiteGrapher(Grapher):
                 f.write(resp.content)
 
     def get_graph_url(self, metric):
-        config = dict(self.defaults)
+        config = dict(self.graph_defaults)
         config.update({
             'from': self.time_from,
             'until': self.time_until,
@@ -128,15 +137,6 @@ class GraphiteGrapher(Grapher):
 
 
 class PCP(Task):
-    metrics = [
-        'kernel.all.load.1 minute',
-        'mem.util.free',
-        'mem.util.used',
-        'network.interface.*.bytes.*',
-        'disk.all.read_bytes',
-        'disk.all.write_bytes',
-    ]
-
     def __init__(self, ctx, config):
         super(PCP, self).__init__(ctx, config)
         self.log = log
@@ -147,6 +147,7 @@ class PCP(Task):
 
     def setup(self):
         super(PCP, self).setup()
+        hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
         if not self.ctx.archive:
             return
         self.out_dir = os.path.join(
@@ -154,6 +155,13 @@ class PCP(Task):
             'pcp_graphs',
         )
         os.mkdir(self.out_dir)
+        if self.use_graphite:
+            self.graphite = GraphiteGrapher(
+                hosts=hosts,
+                time_from=self.start_time,
+                time_until=self.stop_time,
+                dest_dir=self.out_dir,
+            )
 
     def begin(self):
         self.start_time = int(time.time())
