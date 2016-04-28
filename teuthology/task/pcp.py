@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 
 class Grapher(object):
+    _endpoint = '/'
+
     def __init__(self, hosts, time_from, time_until='now'):
         self.base_url = "{host}{endpoint}".format(
             host=teuth_config.pcp_host,
@@ -38,66 +40,26 @@ class GraphiteGrapher(Grapher):
     )
     _endpoint = '/graphite/render'
 
-    def get_graph_url(self, metric):
-        config = dict(self.defaults)
-        config.update({
-            'from': self.time_from,
-            'until': self.time_until,
-            # urlencode with doseq=True encodes each item as a separate
-            # 'target=' arg
-            'target': self.get_target_globs(metric),
-        })
-        args = urllib.urlencode(config, doseq=True)
-        template = "{base_url}?{args}"
-        return template.format(base_url=self.base_url, args=args)
-
-    def get_target_globs(self, metric=''):
-        globs = ['*{}*'.format(host) for host in self.hosts]
-        if metric:
-            globs = ['{}.{}'.format(glob, metric) for glob in globs]
-        return globs
-
-
-class PCP(Task):
-    metrics = [
-        'kernel.all.load.1 minute',
-        'mem.util.free',
-        'mem.util.used',
-        'network.interface.*.bytes.*',
-        'disk.all.read_bytes',
-        'disk.all.write_bytes',
-    ]
-
-    def __init__(self, ctx, config):
-        super(PCP, self).__init__(ctx, config)
-        self.log = log
-        # until the job stops, we may want to render graphs reflecting the most
-        # current data
-        self.stop_time = 'now'
-
-    def setup(self):
-        super(PCP, self).setup()
+    def write_html(self, mode='dynamic'):
         if not self.ctx.archive:
             return
-        self.out_dir = os.path.join(
-            self.ctx.archive,
-            'pcp_graphs',
+        generated_html = self.generate_html(mode=mode)
+        html_path = os.path.join(self.out_dir, 'pcp.html')
+        with open(html_path, 'w') as f:
+            f.write(generated_html)
+
+    def generate_html(self, mode='dynamic'):
+        cwd = os.path.dirname(__file__)
+        loader = jinja2.loaders.FileSystemLoader(cwd)
+        env = jinja2.Environment(loader=loader)
+        template = env.get_template('pcp.j2')
+        log.debug(str(self.ctx.config))
+        data = template.render(
+            job_id=self.ctx.config.get('job_id'),
+            graphs=self.graphs,
+            mode=mode,
         )
-        os.mkdir(self.out_dir)
-
-    def begin(self):
-        self.start_time = int(time.time())
-        log.debug("cluster: %s", self.cluster)
-        log.debug("start_time: %s", self.start_time)
-        self.build_graph_urls()
-        self.write_html()
-
-    def end(self):
-        self.stop_time = int(time.time())
-        log.debug("stop_time: %s", self.stop_time)
-        self.build_graph_urls()
-        self.download_graphs()
-        self.write_html(mode='static')
+        return data
 
     def build_graph_urls(self):
         hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
@@ -134,6 +96,25 @@ class PCP(Task):
             with open(graph_path, 'wb') as f:
                 f.write(resp.content)
 
+    def get_graph_url(self, metric):
+        config = dict(self.defaults)
+        config.update({
+            'from': self.time_from,
+            'until': self.time_until,
+            # urlencode with doseq=True encodes each item as a separate
+            # 'target=' arg
+            'target': self.get_target_globs(metric),
+        })
+        args = urllib.urlencode(config, doseq=True)
+        template = "{base_url}?{args}"
+        return template.format(base_url=self.base_url, args=args)
+
+    def get_target_globs(self, metric=''):
+        globs = ['*{}*'.format(host) for host in self.hosts]
+        if metric:
+            globs = ['{}.{}'.format(glob, metric) for glob in globs]
+        return globs
+
     @staticmethod
     def _sanitize_metric_name(metric):
         result = metric
@@ -145,26 +126,48 @@ class PCP(Task):
             result = result.replace(rep[0], rep[1])
         return result
 
-    def write_html(self, mode='dynamic'):
+
+class PCP(Task):
+    metrics = [
+        'kernel.all.load.1 minute',
+        'mem.util.free',
+        'mem.util.used',
+        'network.interface.*.bytes.*',
+        'disk.all.read_bytes',
+        'disk.all.write_bytes',
+    ]
+
+    def __init__(self, ctx, config):
+        super(PCP, self).__init__(ctx, config)
+        self.log = log
+        # until the job stops, we may want to render graphs reflecting the most
+        # current data
+        self.stop_time = 'now'
+        self.use_graphite = self.config.get('graphite', True)
+
+    def setup(self):
+        super(PCP, self).setup()
         if not self.ctx.archive:
             return
-        generated_html = self.generate_html(mode=mode)
-        html_path = os.path.join(self.out_dir, 'pcp.html')
-        with open(html_path, 'w') as f:
-            f.write(generated_html)
-
-    def generate_html(self, mode='dynamic'):
-        cwd = os.path.dirname(__file__)
-        loader = jinja2.loaders.FileSystemLoader(cwd)
-        env = jinja2.Environment(loader=loader)
-        template = env.get_template('pcp.j2')
-        log.debug(str(self.ctx.config))
-        data = template.render(
-            job_id=self.ctx.config.get('job_id'),
-            graphs=self.graphs,
-            mode=mode,
+        self.out_dir = os.path.join(
+            self.ctx.archive,
+            'pcp_graphs',
         )
-        return data
+        os.mkdir(self.out_dir)
+
+    def begin(self):
+        self.start_time = int(time.time())
+        log.debug("cluster: %s", self.cluster)
+        log.debug("start_time: %s", self.start_time)
+        self.build_graph_urls()
+        self.write_html()
+
+    def end(self):
+        self.stop_time = int(time.time())
+        log.debug("stop_time: %s", self.stop_time)
+        self.build_graph_urls()
+        self.download_graphs()
+        self.write_html(mode='static')
 
 
 task = PCP
