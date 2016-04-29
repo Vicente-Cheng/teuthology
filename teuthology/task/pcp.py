@@ -212,11 +212,14 @@ class PCP(Task):
 
     def setup(self):
         super(PCP, self).setup()
-        log.debug("cluster: %s", self.cluster)
-        hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
         self.job_id = self.ctx.config.get('job_id')
         self.start_time = int(time.time())
         log.debug("start_time: %s", self.start_time)
+        self.setup_collectors()
+
+    def setup_collectors(self):
+        log.debug("cluster: %s", self.cluster)
+        hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
         if self.use_grafana:
             self.grafana = GrafanaGrapher(
                 hosts=hosts,
@@ -257,6 +260,7 @@ class PCP(Task):
 
     def end(self):
         self.stop_time = int(time.time())
+        self.setup_collectors()
         log.debug("stop_time: %s", self.stop_time)
         if self.use_grafana:
             log.info(
@@ -264,8 +268,8 @@ class PCP(Task):
                 self.grafana.build_graph_url(),
             )
         if self.use_graphite:
-            self.download_graphs()
-            self.write_html(mode='static')
+            self.graphite.download_graphs()
+            self.graphite.write_html(mode='static')
         if self.fetch_archives:
             for remote in self.cluster.remotes.keys():
                 log.info("Copying PCP data into archive...")
