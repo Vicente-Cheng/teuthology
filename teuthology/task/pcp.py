@@ -1,4 +1,6 @@
 # maybe run pcp role?
+import datetime
+import dateutil.tz
 import jinja2
 import logging
 import os
@@ -46,7 +48,8 @@ class PCPArchive(PCPDataSource):
 
     @staticmethod
     def _format_time(seconds):
-        return time.strftime('%Y-%m-%d %H:%M:%S %z', time.gmtime(seconds))
+        dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
+        return dt.strftime('%Y-%m-%d %H:%M:%S %z')
 
 
 class PCPGrapher(PCPDataSource):
@@ -79,7 +82,8 @@ class GrafanaGrapher(PCPGrapher):
 
     @staticmethod
     def _format_time(seconds):
-        return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(seconds))
+        dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
+        return dt.strftime('%Y-%m-%dT%H:%M:%S')
 
 
 class GraphiteGrapher(PCPGrapher):

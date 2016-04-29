@@ -85,6 +85,7 @@ setup(
                       'libvirt-python',
                       # For teuthology-coverage
                       'mysqlclient',
+                      'python-dateutil',
                       ],
 
 
