@@ -83,6 +83,8 @@ class GrafanaGrapher(PCPGrapher):
 
     @staticmethod
     def _format_time(seconds):
+        if seconds == 'now':
+            return seconds
         seconds = int(seconds)
         dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
         return dt.strftime('%Y-%m-%dT%H:%M:%S')
