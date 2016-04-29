@@ -166,10 +166,19 @@ class PCP(Task):
         # current data
         self.stop_time = 'now'
         self.use_graphite = self.config.get('graphite', True)
+        self.use_grafana = self.config.get('grafana', True)
 
     def setup(self):
         super(PCP, self).setup()
         hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
+        job_id = self.ctx.config.get('job_id')
+        if self.use_grafana:
+            self.grafana = GrafanaGrapher(
+                hosts=hosts,
+                time_from=self.start_time,
+                time_until=self.stop_time,
+                job_id=job_id,
+            )
         if not self.ctx.archive:
             return
         self.out_dir = os.path.join(
@@ -183,7 +192,7 @@ class PCP(Task):
                 time_from=self.start_time,
                 time_until=self.stop_time,
                 dest_dir=self.out_dir,
-                job_id=self.ctx.config.get('job_id'),
+                job_id=job_id,
             )
 
     def begin(self):
