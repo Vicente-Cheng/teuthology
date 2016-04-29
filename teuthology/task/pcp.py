@@ -208,8 +208,11 @@ class PCP(Task):
 
     def setup(self):
         super(PCP, self).setup()
+        log.debug("cluster: %s", self.cluster)
         hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
         self.job_id = self.ctx.config.get('job_id')
+        self.start_time = int(time.time())
+        log.debug("start_time: %s", self.start_time)
         if self.use_grafana:
             self.grafana = GrafanaGrapher(
                 hosts=hosts,
@@ -240,9 +243,6 @@ class PCP(Task):
             )
 
     def begin(self):
-        self.start_time = int(time.time())
-        log.debug("cluster: %s", self.cluster)
-        log.debug("start_time: %s", self.start_time)
         if self.use_grafana:
             log.info(
                 "PCP+Grafana dashboard: %s",
