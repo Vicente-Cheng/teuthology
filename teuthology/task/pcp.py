@@ -252,7 +252,7 @@ class PCP(Task):
         if self.use_graphite:
             self.download_graphs()
             self.write_html(mode='static')
-        if self.fetch_archive:
+        if self.fetch_archives:
             for remote in self.cluster.remotes.keys():
                 log.info("Copying PCP data into archive...")
                 cmd = self.archiver.get_pmlogextract_cmd(remote.shortname)
