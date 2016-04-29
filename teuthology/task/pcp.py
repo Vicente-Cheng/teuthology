@@ -48,6 +48,7 @@ class PCPArchive(PCPDataSource):
 
     @staticmethod
     def _format_time(seconds):
+        seconds = int(seconds)
         dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
         return dt.strftime('%Y-%m-%d %H:%M:%S %z')
 
@@ -82,6 +83,7 @@ class GrafanaGrapher(PCPGrapher):
 
     @staticmethod
     def _format_time(seconds):
+        seconds = int(seconds)
         dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
         return dt.strftime('%Y-%m-%dT%H:%M:%S')
 
