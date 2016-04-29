@@ -21,6 +21,31 @@ class PCPDataSource(object):
         self.time_until = time_until
 
 
+class PCPArchive(PCPDataSource):
+    archive_base_path = '/var/log/pcp/pmlogger'
+
+    def get_archive_input_dir(self, host):
+        return os.path.join(
+            self.archive_base_path,
+            host,
+        )
+
+    def get_pmlogextract_cmd(self, host):
+        # pmlogextract -S '@2016-04-28 14:48:53 PDT' -T '@2016-04-28 15:09:37 PDT' /var/log/pcp/pmlogger/smithi005/*.0 /tmp/smithi005
+        cmd = [
+            'pmlogextract',
+            '-S', self._format_time(self.time_from),
+            '-T', self._format_time(self.time_until),
+            os.path.join(self.get_archive_input_dir(host),
+                         host, '*.0'),
+        ]
+        return cmd
+
+    @staticmethod
+    def _format_time(seconds):
+        return time.strftime('%Y-%m-%d %H:%M:%S %z', time.gmtime(seconds))
+
+
 class PCPGrapher(PCPDataSource):
     _endpoint = '/'
 
