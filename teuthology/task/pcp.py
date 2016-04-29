@@ -9,6 +9,8 @@ import urlparse
 
 from teuthology.config import config as teuth_config
 
+from teuthology import misc
+
 from . import Task
 
 log = logging.getLogger(__name__)
@@ -23,6 +25,7 @@ class PCPDataSource(object):
 
 class PCPArchive(PCPDataSource):
     archive_base_path = '/var/log/pcp/pmlogger'
+    archive_file_extensions = ('0', 'index', 'meta')
 
     def get_archive_input_dir(self, host):
         return os.path.join(
@@ -197,17 +200,18 @@ class PCP(Task):
         self.stop_time = 'now'
         self.use_graphite = self.config.get('graphite', True)
         self.use_grafana = self.config.get('grafana', True)
+        self.fetch_archives = self.config.get('fetch_archives', True)
 
     def setup(self):
         super(PCP, self).setup()
         hosts = [rem.shortname for rem in self.cluster.remotes.keys()]
-        job_id = self.ctx.config.get('job_id')
+        self.job_id = self.ctx.config.get('job_id')
         if self.use_grafana:
             self.grafana = GrafanaGrapher(
                 hosts=hosts,
                 time_from=self.start_time,
                 time_until=self.stop_time,
-                job_id=job_id,
+                job_id=self.job_id,
             )
         if not self.ctx.archive:
             return
@@ -222,7 +226,13 @@ class PCP(Task):
                 time_from=self.start_time,
                 time_until=self.stop_time,
                 dest_dir=self.out_dir,
-                job_id=job_id,
+                job_id=self.job_id,
+            )
+        if self.fetch_archives:
+            self.archiver = PCPArchive(
+                hosts=hosts,
+                time_from=self.start_time,
+                time_until=self.stop_time,
             )
 
     def begin(self):
@@ -238,6 +248,16 @@ class PCP(Task):
         self.build_graph_urls()
         self.download_graphs()
         self.write_html(mode='static')
+        if self.fetch_archive:
+            for remote in self.cluster.remotes.keys():
+                log.info("Copying PCP data into archive...")
+                cmd = self.archiver.get_pmlogextract_cmd(remote.shortname)
+                archive_out_path = os.path.join(
+                    misc.get_testdir(),
+                    'pcp_archive_%s' % remote.shortname,
+                )
+                cmd.append(archive_out_path)
+                remote.run(args=cmd)
 
 
 task = PCP
