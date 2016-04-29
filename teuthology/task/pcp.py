@@ -243,12 +243,22 @@ class PCP(Task):
         self.start_time = int(time.time())
         log.debug("cluster: %s", self.cluster)
         log.debug("start_time: %s", self.start_time)
+        if self.use_grafana:
+            log.info(
+                "PCP+Grafana dashboard: %s",
+                self.grafana.build_graph_url(),
+            )
         if self.use_graphite:
             self.graphite.write_html()
 
     def end(self):
         self.stop_time = int(time.time())
         log.debug("stop_time: %s", self.stop_time)
+        if self.use_grafana:
+            log.info(
+                "PCP+Grafana dashboard: %s",
+                self.grafana.build_graph_url(),
+            )
         if self.use_graphite:
             self.download_graphs()
             self.write_html(mode='static')
