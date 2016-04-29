@@ -14,19 +14,24 @@ from . import Task
 log = logging.getLogger(__name__)
 
 
-class Grapher(object):
-    _endpoint = '/'
-
+class PCPDataSource(object):
     def __init__(self, hosts, time_from, time_until='now'):
-        self.base_url = urlparse.urljoin(
-            teuth_config.pcp_host,
-            self._endpoint)
         self.hosts = hosts
         self.time_from = time_from
         self.time_until = time_until
 
 
-class GrafanaGrapher(Grapher):
+class PCPGrapher(PCPDataSource):
+    _endpoint = '/'
+
+    def __init__(self, hosts, time_from, time_until='now'):
+        super(PCPGrapher, self).__init__(hosts, time_from, time_until)
+        self.base_url = urlparse.urljoin(
+            teuth_config.pcp_host,
+            self._endpoint)
+
+
+class GrafanaGrapher(PCPGrapher):
     _endpoint = '/grafana/index.html#/dashboard/script/index.js'
 
     def __init__(self, hosts, time_from, time_until='now', job_id=None):
@@ -49,7 +54,7 @@ class GrafanaGrapher(Grapher):
         return time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(seconds))
 
 
-class GraphiteGrapher(Grapher):
+class GraphiteGrapher(PCPGrapher):
     metrics = [
         'kernel.all.load.1 minute',
         'mem.util.free',
