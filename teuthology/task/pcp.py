@@ -10,6 +10,7 @@ import urllib
 import urlparse
 
 from teuthology.config import config as teuth_config
+from teuthology.orchestra import run
 
 from teuthology import misc
 
@@ -36,14 +37,13 @@ class PCPArchive(PCPDataSource):
         )
 
     def get_pmlogextract_cmd(self, host):
-        # pmlogextract -S '@2016-04-28 14:48:53 PDT' -T '@2016-04-28 15:09:37 PDT' /var/log/pcp/pmlogger/smithi005/*.0 /tmp/smithi005
         cmd = [
             'pmlogextract',
             '-S', self._format_time(self.time_from),
             '-T', self._format_time(self.time_until),
-            os.path.join(
+            run.Raw(os.path.join(
                 self.get_archive_input_dir(host),
-                '*.0'),
+                '*.0')),
         ]
         return cmd
 
