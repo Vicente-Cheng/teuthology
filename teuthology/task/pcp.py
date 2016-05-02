@@ -49,7 +49,7 @@ class PCPArchive(PCPDataSource):
 
     @staticmethod
     def _format_time(seconds):
-        return time.asctime(time.gmtime(seconds))
+        return "@ %s" % time.asctime(time.gmtime(seconds))
 
 
 class PCPGrapher(PCPDataSource):
