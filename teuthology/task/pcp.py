@@ -41,8 +41,9 @@ class PCPArchive(PCPDataSource):
             'pmlogextract',
             '-S', self._format_time(self.time_from),
             '-T', self._format_time(self.time_until),
-            os.path.join(self.get_archive_input_dir(host),
-                         host, '*.0'),
+            os.path.join(
+                self.get_archive_input_dir(host),
+                '*.0'),
         ]
         return cmd
 
