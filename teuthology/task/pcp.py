@@ -49,9 +49,7 @@ class PCPArchive(PCPDataSource):
 
     @staticmethod
     def _format_time(seconds):
-        seconds = int(seconds)
-        dt = datetime.datetime.fromtimestamp(seconds, dateutil.tz.tzutc())
-        return dt.strftime('%Y-%m-%d %H:%M:%S %z')
+        return time.asctime(time.gmtime(seconds))
 
 
 class PCPGrapher(PCPDataSource):
