@@ -207,7 +207,9 @@ class PCP(Task):
         self.stop_time = 'now'
         self.use_graphite = self.config.get('graphite', True)
         self.use_grafana = self.config.get('grafana', True)
-        self.fetch_archives = self.config.get('fetch_archives', True)
+        # fetch_archives defaults to False for now because of various bugs in
+        # pmlogextract
+        self.fetch_archives = self.config.get('fetch_archives', False)
 
     def setup(self):
         super(PCP, self).setup()
