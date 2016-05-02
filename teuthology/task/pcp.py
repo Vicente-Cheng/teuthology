@@ -233,7 +233,8 @@ class PCP(Task):
             self.ctx.archive,
             'pcp_graphs',
         )
-        os.mkdir(self.out_dir)
+        if not os.path.exists(self.out_dir):
+            os.mkdir(self.out_dir)
         if self.use_graphite:
             self.graphite = GraphiteGrapher(
                 hosts=hosts,
